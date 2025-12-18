@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臨床疫苗資訊系統 | Vaccine Formulary</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --medical-blue: #005eb8; /* NHS Blue style */
+            --medical-dark: #003087;
+            --medical-light: #e6f2ff;
+            --alert-red: #d32f2f;
+            --warning-orange: #ed6c02;
+            --safe-green: #2e7d32;
+            --neutral-grey: #757575;
+            --bg-color: #f4f6f8;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        /* Header Area */
+        header {
+            background: linear-gradient(135deg, var(--medical-dark), var(--medical-blue));
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Search & Filter */
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            flex-grow: 1;
+            max-width: 500px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 25px;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .filter-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: white;
+            color: var(--medical-blue);
+            font-weight: bold;
+        }
+
+        /* Main Content Grid */
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Card Design */
+        .med-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            border-left: 5px solid var(--medical-blue);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .med-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        }
+
+        /* Dynamic Border Colors based on Pregnancy Category */
+        .med-card[data-preg="X"] { border-left-color: var(--alert-red); }
+        .med-card[data-preg="C"] { border-left-color: var(--warning-orange); }
+        .med-card[data-preg="B"] { border-left-color: var(--safe-green); }
+        .med-card[data-preg="Unknown"] { border-left-color: var(--neutral-grey); }
+
+        .card-header {
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .drug-code {
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+            color: #666;
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+
+        .drug-name-zh {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .drug-name-en {
+            font-size: 0.9rem;
+            color: #555;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .preg-badge {
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: white;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .preg-X { background-color: var(--alert-red); }
+        .preg-C { background-color: var(--warning-orange); }
+        .preg-B { background-color: var(--safe-green); }
+        .preg-Unknown { background-color: var(--neutral-grey); }
+
+        .card-body {
+            padding: 1.2rem;
+            flex-grow: 1;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .info-icon {
+            width: 25px;
+            color: var(--medical-blue);
+            text-align: center;
+            margin-right: 10px;
+        }
+
+        .generic-name {
+            font-size: 0.85rem;
+            color: #777;
+            margin-bottom: 15px;
+            border-left: 2px solid #ddd;
+            padding-left: 8px;
+        }
+
+        .tag-container {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: var(--medical-light);
+            color: var(--medical-dark);
+        }
+
+        .high-alert-tag {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Footer */
+        .card-footer {
+            background: #fafafa;
+            padding: 0.8rem 1.2rem;
+            font-size: 0.85rem;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+            .header-content { flex-direction: column; align-items: stretch; }
+            .search-bar { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1><i class="fa-solid fa-user-doctor"></i> 疫苗臨床資訊系統</h1>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="搜尋代碼、藥名、成分...">
+        </div>
+    </div>
+    <div class="header-content" style="margin-top:0; padding-top:0;">
+        <div class="filter-btn-group">
+            <button class="filter-btn active" onclick="filterData('all')">全部</button>
+            <button class="filter-btn" onclick="filterData('X')">懷孕等級 X</button>
+            <button class="filter-btn" onclick="filterData('Flu')">流感疫苗</button>
+            <button class="filter-btn" onclick="filterData('Hep')">肝炎疫苗</button>
+            <button class="filter-btn" onclick="filterData('Self')">自費項目</button>
+            <button class="filter-btn" onclick="filterData('Public')">公費項目</button>
+        </div>
+    </div>
+</header>
+
+<div class="container" id="cardContainer">
+    </div>
+
+<script>
+    // 疫苗數據資料庫
+    const vaccines = [
+        { code: "C5IN12", nameZH: "嬰護寧五合一疫苗", nameEN: "Infanrix-IPV+Hib", generic: "DPTa + Polio + Hib", spec: "0.5ml/syringe", preg: "Unknown", tags: ["公費", "兒科"], type: "Other" },
+        { code: "CDPT03", nameZH: "補施追疫苗", nameEN: "Boostrix", generic: "Tdap", spec: "0.5ml/vial", preg: "Unknown", tags: ["破傷風"], type: "Other" },
+        { code: "CEV71", nameZH: "腸病毒71型疫苗", nameEN: "Envacgen", generic: "Enterovirus 71 vaccine", spec: "2.5mcg/0.5ml", preg: "Unknown", tags: ["腸病毒"], type: "Other" },
+        { code: "CHEPAT2", nameZH: "新赫寶克A型肝炎疫苗", nameEN: "Havrix", generic: "Hepatitis A vaccine", spec: "1440ELISA/1ml", preg: "C", tags: ["肝炎"], type: "Hep" },
+        { code: "CHEPA16", nameZH: "A型肝炎疫苗(兒童)", nameEN: "Avaxim 80U", generic: "Hepatitis A vaccine", spec: "80U/0.5ml", preg: "C", tags: ["公費", "兒科", "肝炎"], type: "Hep" },
+        { code: "CHEPAT6", nameZH: "安在時B型肝炎疫苗", nameEN: "Engerix-B", generic: "Hepatitis B vaccine", spec: "20mcg/ml", preg: "C", tags: ["自費", "肝炎"], type: "Hep" },
+        { code: "CHEPA15", nameZH: "安在時B型肝炎疫苗", nameEN: "Engerix-B", generic: "Hepatitis B vaccine", spec: "10mcg/0.5ml", preg: "C", tags: ["公費", "肝炎"], type: "Hep" },
+        { code: "CHEPA11", nameZH: "安在時B型肝炎疫苗", nameEN: "Engerix-B", generic: "Hepatitis B vaccine", spec: "20mcg/1ml", preg: "C", tags: ["公費", "肝炎"], type: "Hep" },
+        { code: "CHPV2", nameZH: "嘉喜 (九價HPV)", nameEN: "Gardasil 9", generic: "HPV 9-valent vaccine", spec: "0.5ml/syringe", preg: "B", tags: ["HPV", "預防癌症"], type: "Other" },
+        { code: "CINFLU4", nameZH: "流感疫苗(多廠牌)", nameEN: "Fluarix/Flucelvax", generic: "Influenza vaccine", spec: "0.5ml/syringe", preg: "C", tags: ["公費", "兒科", "流感"], type: "Flu" },
+        { code: "CINFLU2", nameZH: "伏流威疫苗", nameEN: "Fluarix trivalent", generic: "Influenza vaccine", spec: "0.5ml/syring", preg: "C", tags: ["自費", "流感"], type: "Flu" },
+        { code: "WINFLUE", nameZH: "能伏鼻三價鼻噴式疫苗", nameEN: "FluMist", generic: "Influenza vaccine (Live)", spec: "Nasal Spray", preg: "C", tags: ["自費", "流感", "鼻噴劑", "活性減毒"], type: "Flu" },
+        { code: "CINFLU3", nameZH: "流感疫苗(成人)", nameEN: "AdimFlu-S/Vaxigrip", generic: "Influenza vaccine", spec: "0.5ml/syringe", preg: "C", tags: ["公費", "流感"], type: "Flu" },
+        { code: "CMMR01", nameZH: "MMR三種混合疫苗", nameEN: "MMRII", generic: "Measles, mumps, rubella", spec: "25mcg/0.5ml", preg: "Unknown", tags: ["活性減毒"], type: "Other" },
+        { code: "CMENB", nameZH: "必思諾B型腦膜炎疫苗", nameEN: "Bexsero", generic: "Meningococcal B", spec: "0.5ml/dose", preg: "C", tags: ["腦膜炎"], type: "Other" },
+        { code: "CPNEUM6", nameZH: "沛兒肺炎鏈球菌13價", nameEN: "Prevenar 13", generic: "PCV13", spec: "0.5ml/syringe", preg: "Unknown", tags: ["肺炎", "結合型"], type: "Other" },
+        { code: "CPNEUMO", nameZH: "紐摩肺多價性肺炎疫苗", nameEN: "Pneumovax 23", generic: "PPV23", spec: "0.5ml/vial", preg: "C", tags: ["肺炎", "多醣體"], type: "Other" },
+        { code: "CRSV", nameZH: "欣剋胜呼吸道融合病毒疫苗", nameEN: "Arexvy", generic: "RSV vaccine", spec: "0.5ml/vial", preg: "X", tags: ["RSV", "高警訊"], type: "Other" },
+        { code: "KROTAVI", nameZH: "羅特律輪狀病毒疫苗", nameEN: "Rotarix", generic: "Rotavirus vaccine", spec: "1.5ml/vial", preg: "-", tags: ["口服", "活性減毒", "兒科"], type: "Other" },
+        { code: "CZOSTE1", nameZH: "欣剋疹帶狀疱疹疫苗", nameEN: "Shingrix", generic: "Zoster vaccine", spec: "50mcg/0.5ml", preg: "Unknown", tags: ["帶狀疱疹", "非活性"], type: "Other" }
+    ];
+
+    const container = document.getElementById('cardContainer');
+    const searchInput = document.getElementById('searchInput');
+
+    // 渲染卡片函數
+    function renderCards(data) {
+        container.innerHTML = '';
+        if (data.length === 0) {
+            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #666; padding: 2rem;">查無相符資料</div>';
+            return;
+        }
+
+        data.forEach(drug => {
+            // 判斷給藥途徑圖示
+            let routeIcon = 'fa-syringe'; // 預設針劑
+            let routeText = '注射劑';
+            
+            if (drug.tags.includes("鼻噴劑") || drug.spec.toLowerCase().includes("nasal")) {
+                routeIcon = 'fa-head-side-mask'; // 鼻噴
+                routeText = '鼻噴劑';
+            } else if (drug.tags.includes("口服")) {
+                routeIcon = 'fa-pills'; // 口服
+                routeText = '口服劑型';
+            }
+
+            // 判斷懷孕分級顏色樣式
+            let pregClass = `preg-${drug.preg}`;
+            if (drug.preg === '-') pregClass = 'preg-Unknown';
+
+            // 判斷是否高警訊 (這裡是模擬，以RSV和Preg X為例，或數據庫tag)
+            let highAlertHtml = '';
+            if (drug.tags.includes("高警訊") || drug.preg === 'X') {
+                highAlertHtml = `<span class="tag high-alert-tag"><i class="fa-solid fa-triangle-exclamation"></i> 高警訊</span>`;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'med-card';
+            card.setAttribute('data-preg', drug.preg);
+            
+            card.innerHTML = `
+                <div class="card-header">
+                    <div>
+                        <span class="drug-code">${drug.code}</span>
+                        <h2 class="drug-name-zh">${drug.nameZH}</h2>
+                        <div class="drug-name-en">${drug.nameEN}</div>
+                    </div>
+                    <div class="preg-badge ${pregClass}" title="懷孕分級">
+                        ${drug.preg}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="generic-name">${drug.generic}</div>
+                    
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fa-solid ${routeIcon}"></i></div>
+                        <div>${routeText}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fa-solid fa-flask"></i></div>
+                        <div>${drug.spec}</div>
+                    </div>
+
+                    <div class="tag-container">
+                        ${drug.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        ${highAlertHtml}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span><i class="fa-regular fa-clipboard"></i> 庫存請洽藥庫</span>
+                    <i class="fa-solid fa-angle-right"></i>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // 初始渲染
+    renderCards(vaccines);
+
+    // 搜尋功能
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = vaccines.filter(drug => 
+            drug.code.toLowerCase().includes(term) ||
+            drug.nameZH.includes(term) ||
+            drug.nameEN.toLowerCase().includes(term) ||
+            drug.generic.toLowerCase().includes(term)
+        );
+        renderCards(filtered);
+    });
+
+    // 分類過濾功能
+    function filterData(type) {
+        // 更新按鈕狀態
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        let filtered = [];
+        switch(type) {
+            case 'all':
+                filtered = vaccines;
+                break;
+            case 'X':
+                filtered = vaccines.filter(d => d.preg === 'X');
+                break;
+            case 'Flu':
+                filtered = vaccines.filter(d => d.tags.includes('流感'));
+                break;
+            case 'Hep':
+                filtered = vaccines.filter(d => d.tags.includes('肝炎'));
+                break;
+            case 'Self':
+                filtered = vaccines.filter(d => d.tags.includes('自費') || d.nameZH.includes('自費'));
+                break;
+            case 'Public':
+                filtered = vaccines.filter(d => d.tags.includes('公費') || d.nameZH.includes('公費'));
+                break;
+            default:
+                filtered = vaccines;
+        }
+        renderCards(filtered);
+    }
+</script>
+
+</body>
+</html>
